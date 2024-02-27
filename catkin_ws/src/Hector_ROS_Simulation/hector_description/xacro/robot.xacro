@@ -1,0 +1,149 @@
+<?xml version="1.0"?>
+<!-- xacro标准开头 -->
+<!-- link与link之间的连接都需要使用joit 可以是活动的或是固定的 但不能没有不然两个就分开了 -->
+<robot name="hector_description" xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <!-- 包含其他 xacro 文件 -->
+    <xacro:include filename="$(find hector_description)/xacro/const.xacro"/>
+    <xacro:include filename="$(find hector_description)/xacro/materials.xacro"/>
+    <xacro:include filename="$(find hector_description)/xacro/leg.xacro"/>
+    <xacro:include filename="$(find hector_description)/xacro/stairs.xacro"/>
+    <xacro:include filename="$(find hector_description)/xacro/gazebo.xacro"/>
+
+    <!-- <xacro:stairs stairs="15" xpos="0" ypos="0" zpos="0" /> -->
+
+    <!-- Rollover Protection mode will add an additional stick on the top, use "true" or "false" to switch it.
+         翻转保护模式将在顶部增加一个额外的棒，使用“真”或“假”来切换它 -->
+    <xacro:property name="rolloverProtection" value="false"/>
+
+    <!-- Debug mode will hung up the robot, use "true" or "false" to switch it. 
+         调试模式会挂起机器人，用“真”或“假”来切换。-->
+         <!-- 来至biped.launch文件的DEBUG:=$(arg user_debug) 如果 value 为真就执行if 程序中没有执行
+         添加 "world" 的链接（link）
+         添加固定类型的关节 作为 基础静力接头 用于连接世界和base-->
+    <xacro:if value="$(arg DEBUG)">
+        <link name="world"/>
+        <joint name="base_static_joint" type="fixed">
+            <!-- 相对于父链接或关节坐标系的原点和方向 -->
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <parent link="world"/>
+            <child link="base"/>
+        </joint>
+    </xacro:if> 
+    <!-- 定义一个base作为起始点避免一半在地面下,通常是很小的体积且无质量 没有碰撞盒 没有转动惯量 位置在000 000  
+         但是在biped.launch文件中已经将初始高度定在0.545,以0.545为坐标原点-->
+    <link name="base">
+        <visual>
+            <!-- 相对于父链接或关节坐标系的原点和方向 -->
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <geometry>
+                <box size="0.001 0.001 0.001"/>
+            </geometry>
+        </visual>
+    </link>
+    <!-- 关节 浮动基座 使用固定类型 连接基座和身体 -->
+    <joint name="floating_base" type="fixed">
+        <!-- 相对于父链接或关节坐标系的原点和方向 -->
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <parent link="base"/>
+        <child link="trunk"/>
+    </joint>
+
+    <link name="trunk">
+        <!-- 可视化外观 不影响机器人的物理行为-->
+        <visual>
+            <!-- 相对于父链接或关节坐标系的原点和方向 -->
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <geometry>
+                <!-- 几何形状 来源文件  三轴放大倍数 正常-->
+                <mesh filename="package://hector_description/meshes/body.STL" scale="1 1 1"/>
+            </geometry>
+            <!-- 材料 白色 -->
+            <material name="white"/>
+        </visual>
+        <!-- 模型的物理碰撞几何形状 一般简化成矩形 圆柱形 球形等规则几何体-->
+        <collision>
+            <!-- 相对于父链接或关节坐标系的原点和方向 -->
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <geometry>
+                <!-- 几何形状 来源于外部定义 -->
+                <box size="${trunk_length} ${trunk_width} ${trunk_height}"/>
+            </geometry>
+        </collision>
+        <!-- 链接link的惯性属性，即链接的质心位置、质量和惯性矩阵 -->
+        <inertial>
+            <origin rpy="0 0 0" xyz="${trunk_com_x} ${trunk_com_y} ${trunk_com_z}"/>
+            <mass value="${trunk_mass}"/>
+            <inertia
+                ixx="${trunk_ixx}" ixy="${trunk_ixy}" ixz="${trunk_ixz}"
+                iyy="${trunk_iyy}" iyz="${trunk_iyz}"
+                izz="${trunk_izz}"/>  
+        </inertial>
+    </link>
+    <!-- 如果上面定义了rolloverProtection 就定义一个固定类型的插销关节 连接躯干和拉杆 实际程序中没有定义-->
+    <xacro:if value="${(rolloverProtection == 'True')}">
+        <joint name="stick_joint" type="fixed">
+            <parent link="trunk"/>
+            <child link="stick_link"/>
+            <origin rpy="0 0 0" xyz="${0.18} 0 ${stick_length/2.0+0.08}"/>
+        </joint>
+
+        <link name="stick_link">
+            <visual>
+                <geometry>
+                    <cylinder length="${stick_length}" radius="${stick_radius}"/>
+                </geometry>
+                <origin rpy="0 0 0" xyz="0 0 0"/>
+                <material name="white"/>
+            </visual>
+            <collision>
+                <geometry>
+                    <cylinder length="${stick_length}" radius="${stick_radius}"/>
+                </geometry>
+                <origin rpy="0 0 0" xyz="0 0 0"/>
+            </collision>
+            <inertial>
+                <mass value="${stick_mass}"/>
+                <inertia
+                    ixx="${stick_mass / 2.0 * (stick_radius*stick_radius)}" ixy="0.0" ixz="0.0"
+                    iyy="${stick_mass / 12.0 * (3*stick_radius*stick_radius + stick_length*stick_length)}" iyz="0.0"
+                    izz="${stick_mass / 12.0 * (3*stick_radius*stick_radius + stick_length*stick_length)}"/>                   
+            </inertial>
+        </link>
+    </xacro:if> 
+    <!-- 定义imu的关节,用来固定在躯干上  没有位姿的偏移 在初始的原点位置 即距离地面0.545m-->
+    <joint name="imu_joint" type="fixed">
+        <parent link="trunk"/>
+        <child link="imu_link"/>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+    </joint>
+    <!-- 定义imu这个“块” 没有位姿的偏移 转动惯量几乎没有 体积几乎没有 碰撞盒几乎没有-->
+    <link name="imu_link">
+        <inertial>
+            <mass value="0.001"/>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+        </inertial>
+        <visual>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <geometry>
+                <box size="0.001 0.001 0.001"/>
+            </geometry>
+            <material name="red"/>
+        </visual>
+        <collision>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <geometry>
+                <box size=".001 .001 .001"/>
+            </geometry>
+        </collision>
+    </link>
+    <!-- 使用Xacro宏语法定义了两条腿 提高代码复用率 传入的角度000 xyz是髋关节的偏移 -->
+    <xacro:leg name="L" mirror="1" mirror_dae="False">
+        <origin rpy="0 0 0" xyz="${hip_offset_x} ${hip_offset_y} ${-hip_offset_z}"/>
+    </xacro:leg>
+
+    <xacro:leg name="R" mirror="-1" mirror_dae="True">
+        <origin rpy="0 0 0" xyz="${hip_offset_x} ${-hip_offset_y} ${-hip_offset_z}"/>
+    </xacro:leg>
+
+</robot>

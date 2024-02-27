@@ -1,0 +1,52 @@
+<?xml version="1.0" ?>
+<sdf version="1.5">
+    <world name="default">
+
+        <physics type="ode">
+        <!-- 最大步长 -->
+        <max_step_size>0.001</max_step_size>
+        <!-- 实时因子 仿真时间和真实时间的倍率 -->
+        <real_time_factor>0.1</real_time_factor>
+        <!-- 实时更新率 -->
+        <real_time_update_rate>100</real_time_update_rate>
+        <!-- 重力 -->
+        <gravity>0 0 -9.81</gravity>
+            <ode>
+                <solver>
+                <type>quick</type>  
+                <iters>50</iters> 
+                <sor>1.3</sor>
+                </solver>  
+                <constraints>
+                <cfm>0.0</cfm>
+                <erp>0.2</erp>
+                <contact_max_correcting_vel>10.0</contact_max_correcting_vel>
+                <contact_surface_layer>0.001</contact_surface_layer>
+                </constraints>  
+            </ode>
+        </physics>
+
+        <scene>
+        <sky>
+            <clouds>
+                <speed>12</speed>
+            </clouds>
+        </sky>
+        </scene>
+        <!-- A global light source 光源-->
+        <include>
+            <uri>model://sun</uri>
+        </include>
+        <!-- A ground plane 地面-->
+        <include>
+            <uri>model://ground_plane</uri>
+        </include>
+        <!-- environment blocks, obstacles or stairs -->
+        <model name="static_environment">
+        <static>true</static>
+    
+        </model>
+    
+
+    </world>
+</sdf>

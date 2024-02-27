@@ -1,0 +1,25 @@
+<!-- 使用本文件可以启动rviz查看各个坐标系的位置，模拟关节状态    
+启动命令 roslauch hector_description hector_rviz.launch-->
+<launch>
+    <!-- 宏定义一个参数 赋值 false -->
+    <arg name="user_debug" default="false"/>
+    <!-- 命令 使用 xacro 工具处理机器人的描述文件并将结果作为参数 robot_description 传递给 ROS 不使用调试-->
+    <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find hector_description)/xacro/robot.xacro'
+            DEBUG:=$(arg user_debug)"/>
+
+    <!-- for higher robot_state_publisher average rate-->
+    <!-- <param name="rate" value="1000"/> -->
+
+    <!-- send fake joint values -->
+    <!-- 启动了节点，用于发送虚拟关节状态。 -->
+    <node pkg="joint_state_publisher" type="joint_state_publisher" name="joint_state_publisher">
+        <param name="use_gui" value="TRUE"/>
+    </node>
+    <!-- 启动了节点，用于发送机器人状态。 发布频率1000Hz-->
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher">
+        <param name="publish_frequency" type="double" value="1000.0"/>
+    </node>
+    <!-- 启动 RViz 可视化工具，并加载指定的 RViz 配置文件 check_joint.rviz 该文件保存了之前的设置-->
+    <node pkg="rviz" type="rviz" name="rviz" respawn="false" output="screen"
+        args="-d $(find hector_description)/launch/check_joint.rviz"/>
+</launch>

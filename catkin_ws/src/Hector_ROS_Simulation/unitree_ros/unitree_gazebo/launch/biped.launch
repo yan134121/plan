@@ -1,0 +1,96 @@
+<!-- 中文注释可能会导致报错,所以本文件仅作为帮助理解 -->
+<!-- 这个ROS Launch文件用于启动Gazebo仿真环境，加载机器人模型（URDF）并配置相应的控制器 -->
+<!-- 修改仿真速度的快慢在catkin_ws\src\Hector_ROS_Simulation\unitree_ros\unitree_gazebo\worlds\normal.world的real_time_factor -->
+<launch>
+    <!-- 世界名字 -->
+    <arg name="wname" default="normal"/>
+    <!-- 机器人名字 -->
+    <arg name="rname" default="hector"/>
+    <!-- 描述机器人文件的路径 -->
+    <arg name="robot_path" value="(find $(arg rname)_description)"/>
+    <!-- dollar表示"$"符号 不同系统美元符号需要转义或被重新解释-->
+    <arg name="dollar" value="$"/>
+    <!-- 控制 Gazebo 启动时是否处于暂停状态 -->
+    <arg name="paused" default="true"/>
+    <!-- 控制 ROS 使用仿真时间。而不是真实时间 -->
+    <arg name="use_sim_time" default="true"/>
+    <!-- 启动 GUI 界面 -->
+    <!-- Gazebo 启动 GUI 界面 -->
+    <arg name="gui" default="true"/>
+    <!-- Gazebo 在图形界面下运行。 -->
+    <arg name="headless" default="false"/>
+    <!-- 不启动调试模式和不输出更详细的日志信息 -->
+    <arg name="debug" default="false"/>
+    <!-- Debug mode will hung up the robot, use "true" or "false" to switch it.
+    调试模式会挂起机器人，用“真”或“假”来切换 -->
+    <arg name="user_debug" default="false"/>
+    <!-- 引入gazebo自带的空世界 Launch 文件 并传入参数-->
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <!-- 指定了具体的世界文件 可以方便的使用别人创建的世界-->
+        <arg name="world_name" value="$(find unitree_gazebo)/worlds/$(arg wname).world"/>
+        <!-- 传入上面的设置 -->
+        <arg name="debug" value="$(arg debug)"/>
+        <arg name="gui" value="$(arg gui)"/>
+        <arg name="paused" value="$(arg paused)"/>
+        <arg name="use_sim_time" value="$(arg use_sim_time)"/>
+        <arg name="headless" value="$(arg headless)"/>
+    </include>
+    
+    <!-- Load the URDF into the ROS Parameter Server 
+    将URDF加载到ROS参数服务器中 是一种XML格式的文件，用于描述机器人的结构、几何、关节、传感器以及其他相关信息-->
+    <!--$(find package_name) 是ROS命令 $(find xacro)/xacro:寻找该文件夹下xacro文件夹里的xacro文件
+    inorder 按照文件中的顺序解析元素，而不是按需解析
+    命令寻找的文件是'$hector_description/xacro/robot.xacro' 
+    不使用调试模式 -->
+    <param name="robot_description"
+           command="$(find xacro)/xacro --inorder '$(arg dollar)$(arg robot_path)/xacro/robot.xacro' 
+           DEBUG:=$(arg user_debug)"/>
+
+    <!-- Run a python script to the send a service call to gazebo_ros to spawn a URDF robot 
+    运行python脚本向gazebo_ros发送一个服务调用，以生成一个URDF机器人-->
+    <!-- Set trunk and joint positions at startup 启动时设置主干和关节位置-->
+    <!-- 调用gazebo_ros 包创建节点运行spawn_model程序,生成一个模型urdf_spawner  不重新启动 输出到屏幕 -->
+    <!-- urdf指定接下来的参数是 URDF 描述 
+         设置模型的初始高度为 0.545和x轴位置
+         设置模型的关节初始位置
+         生成的模型的名称为 "hector_gazebo"
+         参数来至 robot_description-->
+    <node pkg="gazebo_ros" type="spawn_model" name="urdf_spawner" respawn="false" output="screen"
+          args="-urdf 
+          -z 0.545
+          -x 0.0
+          -J L_thigh_joint 0
+          -J L_calf_joint 0
+          -J L_toe_joint 0
+          -J R_thigh_joint 0
+          -J R_calf_joint 0
+          -J R_toe_joint 0
+          -model hector_gazebo -param robot_description "/>
+
+    <!-- Load joint controller configurations from YAML file to parameter server
+         将联合控制器配置从yaml文件加载到参数服务器 
+         $hector_description/config/robot_control.yaml command 使用命令load-->
+    <rosparam file="$(arg dollar)$(arg robot_path)/config/robot_control.yaml" command="load"/>
+
+    <!-- load the controllers 加载五个电机的控制器-->
+    <!-- 调用controller_manager产卵 名字叫controller_spawner 失败不重启 
+         ns="/hector_gazebo": 指定节点的命名空间，节点下的所有参数和话题都会加上 /hector_gazebo 的前缀-->
+    <node pkg="controller_manager" type="spawner" name="controller_spawner" respawn="false"
+          output="screen" ns="/hector_gazebo" args="joint_state_controller
+          L_hip_controller L_hip2_controller L_thigh_controller L_calf_controller L_toe_controller
+          R_hip_controller R_hip2_controller R_thigh_controller R_calf_controller R_toe_controller
+         "/>
+
+    <!-- convert joint states to TF transforms for rviz, etc 
+         将关节状态转换为rviz的TF变换，等等-->
+    <!-- 发布机器人的关节状态信息 将 /joint_states 话题重新映射为 /hector_gazebo/joint_states，
+         关节状态信息就会被发布到 /hector_gazebo/joint_states 话题上-->
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher"
+          respawn="false" output="screen">
+        <remap from="/joint_states" to="/hector_gazebo/joint_states"/>
+    </node>
+
+
+    <!-- <node pkg="unitree_gazebo" type="servo" name="servo" required="true" output="screen"/> -->
+
+</launch>

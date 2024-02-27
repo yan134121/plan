@@ -1,0 +1,188 @@
+<?xml version="1.0"?>
+<robot>
+    <!-- ros_control plugin Ros控制插件 -->
+    <gazebo>
+        <!-- 用于添加Gazebo插件 -->
+        <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+            <robotNamespace>/hector_gazebo</robotNamespace>
+            <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType>
+        </plugin>
+    </gazebo>
+
+    <!-- Show the trajectory of trunk center. 显示躯干中心的轨迹。-->
+    <!-- 添加了一个用于显示机器人轨迹的插件，可以以频率为10Hz在Gazebo中显示机器人的运动轨迹 -->
+    <gazebo>
+        <plugin name="3dplot" filename="libLinkPlot3DPlugin.so">
+            <frequency>10</frequency>
+            <plot>
+                <link>base</link>
+                <pose>0 0 0 0 0 0</pose>
+                <material>Gazebo/Yellow</material>
+            </plot>
+        </plugin>
+    </gazebo>
+    <!-- 为机器人的trunk添加一个力 模拟受到的外部作用力 -->
+    <gazebo>
+        <!-- 调用的插件库文件名   实例化名字 -->
+        <plugin filename="libgazebo_ros_force.so" name="gazebo_ros_force">
+            <!-- 受力对象 -->
+            <bodyName>trunk</bodyName>
+            <!-- 需要监听的话题 -->
+            <topicName>/apply_force/trunk</topicName>
+        </plugin>
+    <!-- 添加了IMU传感器 -->
+    </gazebo>
+    <!-- 指定作用到的部件 -->
+    <gazebo reference="imu_link">
+        <!-- 开启重力加速度 -->
+        <gravity>true</gravity>
+        <!-- 给传感器命名，类型是imu -->
+        <sensor name="imu_sensor" type="imu">
+            <!-- 传感器一直开启 -->
+            <always_on>true</always_on>
+            <!-- 更新速率 1000Hz-->
+            <update_rate>1000</update_rate>
+            <!-- 可视化开启 -->
+            <visualize>true</visualize>
+            <!-- 实例化使用默认的话题 -->
+            <topic>__default_topic__</topic>
+            <!-- 调用插件文件名 实例化命名 -->
+            <plugin filename="libgazebo_ros_imu_sensor.so" name="imu_plugin">
+                <!-- 话题名称 -->
+                <topicName>trunk_imu</topicName>
+                <!-- 作用到的部件名字 -->
+                <bodyName>imu_link</bodyName>
+                <!-- 更新频率 -->
+                <updateRateHZ>1000.0</updateRateHZ>
+                <!-- 高斯噪声 使得传感器更加逼真 -->
+                <gaussianNoise>0.00</gaussianNoise>
+                <!-- 位姿偏移。指漂移 -->
+                <xyzOffset>0 0 0</xyzOffset>
+                <rpyOffset>0 0 0</rpyOffset>
+                <!-- 坐标系框架名称 -->
+                <frameName>imu_link</frameName>
+            </plugin>
+            <!-- 放置的位姿 -->
+            <pose>0 0 0 0 0 0</pose>
+        </sensor>
+    </gazebo>
+
+<!-- 指定与模型中的物理属性和外观相关联的链接 -->
+    <gazebo reference="base">
+        <material>Gazebo/Green</material>
+        <!-- 受到重力 -->
+        <turnGravityOff>false</turnGravityOff>
+    </gazebo>
+
+    <gazebo reference="trunk">
+        <!-- 静摩擦系数 -->
+        <mu1>0.2</mu1>
+        <!-- 动摩擦系数 应该还有一个滚动摩擦系数mu3-->
+        <mu2>0.2</mu2>
+        <!-- 指定材质 -->
+        <material>Gazebo/DarkGrey</material>
+    </gazebo>
+    <!-- 没有指定摩擦系数作用的材质 也没有该部件trunkcol 可能是错的 -->
+     <gazebo reference="trunkcol">
+        <mu1>0.2</mu1>
+        <mu2>0.2</mu2>
+       
+    </gazebo>
+
+    <gazebo reference="stick_link">
+        <mu1>0.2</mu1>
+        <mu2>0.2</mu2>
+        <material>Gazebo/White</material>
+    </gazebo>
+
+    <gazebo reference="imu_link">
+        <mu1>1</mu1>
+        <mu2>1</mu2>
+        <material>Gazebo/Red</material>
+    </gazebo>
+
+    <!-- L leg -->
+    <gazebo reference="L_hip">
+        <mu1>1</mu1>
+        <mu2>1</mu2>
+        <!-- 弹簧系数 -->
+        <kp  value="100000.0"/>
+        <!-- 阻尼系数 -->
+        <kd  value="1000.0"/>
+        <material>Gazebo/DarkGrey</material>
+    </gazebo>
+    <gazebo reference="L_hip2">
+        <mu1>1</mu1>
+        <mu2>1</mu2>
+        <kp  value="100000.0"/>
+        <kd  value="1000.0"/>
+        <material>Gazebo/Red</material>
+    </gazebo>
+    <gazebo reference="L_thigh">
+        <mu1>1</mu1>
+        <mu2>1</mu2>
+        <kp  value="100000.0"/>
+        <kd  value="1000.0"/>
+        <!-- 不会与自身碰撞 -->
+        <self_collide>0</self_collide>
+        <material>Gazebo/DarkGrey</material>
+        
+    </gazebo>
+    <gazebo reference="L_calf">
+        <mu1>1</mu1>
+        <mu2>1</mu2>
+        <kp  value="100000.0"/>
+        <kd  value="1000.0"/>
+        <self_collide>0</self_collide>
+    </gazebo>
+    <gazebo reference="L_toe">
+        <mu1>3</mu1>
+        <mu2>3</mu2>
+        <kp  value="1000000.0"/>
+        <kd  value="1000.0"/>
+        <self_collide>0</self_collide>
+        <material>Gazebo/DarkGrey</material>
+        
+    </gazebo>
+
+    <!--R leg -->
+    <gazebo reference="R_hip">
+        <mu1>1</mu1>
+        <mu2>1</mu2>
+        <kp  value="100000.0"/>
+        <kd  value="1000.0"/>
+        <material>Gazebo/DarkGrey</material>
+    </gazebo>
+    <gazebo reference="R_hip2">
+        <mu1>1</mu1>
+        <mu2>1</mu2>
+        <kp  value="100000.0"/>
+        <kd  value="1000.0"/>
+        <material>Gazebo/Red</material>
+    </gazebo>
+    <gazebo reference="R_thigh">
+        <mu1>1</mu1>
+        <mu2>1</mu2>
+        <kp  value="100000.0"/>
+        <kd  value="1000.0"/>
+        <self_collide>0</self_collide>
+        <material>Gazebo/DarkGrey</material> 
+    </gazebo>
+    <gazebo reference="R_calf">
+        <mu1>1</mu1>
+        <mu2>1</mu2>
+        <kp  value="100000.0"/>
+        <kd  value="1000.0"/>
+        <self_collide>0</self_collide>
+    </gazebo>
+    <gazebo reference="R_toe">
+        <mu1>3</mu1>
+        <mu2>3</mu2>
+        <kp  value="1000000.0"/>
+        <kd  value="1000.0"/>
+        <self_collide>0</self_collide>
+        <material>Gazebo/DarkGrey</material>
+        
+    </gazebo>
+
+</robot>
