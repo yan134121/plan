@@ -35,6 +35,6 @@ void CheaterOrientationEstimator::run() {
       this->_stateEstimatorData.result->omegaBody;
 
   this->_stateEstimatorData.result->rpy =
-      ori::quatToRPY(this->_stateEstimatorData.result->orientation);
+      ori::quatToRPY(this->_stateEstimatorData.result->orientation);//和上面是不是重复了，意义是什么
       
 }

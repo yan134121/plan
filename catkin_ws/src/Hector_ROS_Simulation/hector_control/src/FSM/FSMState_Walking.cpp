@@ -35,11 +35,20 @@ void FSMState_Walking::run()
     _userValue = _data->_lowState->userValue;
     // 扩大范围,从原来的(-1,1)扩大到(-1.5,1.5)
     // 将左脚的y轴输入作整体的x轴输入
-    v_des_body[0] = (double)invNormalize(_userValue.ly, -1.5, 1.5);
+
+    //not understand liu
+
+    v_des_body[0] = (double)invNormalize(_userValue.ly, -1.5, 1.5);//反向归一操作，把当前的左脚的y当成是身体左脚的速度？
     // 将右脚的x轴输入作为整体的y轴输入
     v_des_body[1] = (double)invNormalize(_userValue.rx, -0.5, 0.5);
     // 左腿的x轴输入作为转动角度
     turn_rate = (double)invNormalize(_userValue.lx, -2.0, 2.0);
+
+
+
+
+
+
     // std::cout << "vx vy " << v_des_body[0] << " " << v_des_body[1] << std::endl;
     // 将控制命令解算成各个轴的状态
     _data->_desiredStateCommand->setStateCommands(roll, pitch, v_des_body, turn_rate);

@@ -42,7 +42,7 @@ struct UserValue{
     float lx;
     float ly;
     float rx;
-    float ry;
+    float ry;//左右腿当前的位置
     float L2; // 没用上
     float vx; // vx in body frame 没用上
     float vy; // vy in body frame 没用上

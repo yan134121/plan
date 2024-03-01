@@ -103,7 +103,7 @@ void ConvexMPCLocomotion::run(ControlFSMData &data)
   for (int i = 0; i < 2; i++)
   {
     // 起脚点
-    //每只脚的位置=机器人当前位置+旋转矩阵*（偏移量hip的偏移量（和结构相关）+足端的位置）。
+    //每只脚的位置=机器人当前位置+旋转矩阵*（偏移量hip的偏移量（和结构相关）+足端的位置（这是以hip为坐标原点求的））。
     //公式（29）         这篇文章：Force-and-moment-based Model Predictive Control for Achieving Highly Dynamic
     // data._legController->data[i].p由雅各比计算得到
     pFoot[i] = seResult.position + seResult.rBody.transpose()*(data._biped->getHip2Location(i) + data._legController->data[i].p);
@@ -162,6 +162,10 @@ void ConvexMPCLocomotion::run(ControlFSMData &data)
       // 设置上电时轨迹的起点 就是 站立时的位置
       footSwingTrajectories[i].setFinalPosition(pFoot[i]);
     }
+
+//起点和终点为什么都是pFoot[i]
+
+
     // 上电初始化完毕 一次就行
     firstRun = false;
   }
