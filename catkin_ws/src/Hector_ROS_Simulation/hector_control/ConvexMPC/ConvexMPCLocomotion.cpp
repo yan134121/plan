@@ -163,7 +163,7 @@ void ConvexMPCLocomotion::run(ControlFSMData &data)
       footSwingTrajectories[i].setFinalPosition(pFoot[i]);
     }
 
-//起点和终点为什么都是pFoot[i]
+//起点和终点为什么都是pFoot[i]，只是其一个初始化的作用，后面会再重新赋值终点位置
 
 
     // 上电初始化完毕 一次就行
@@ -171,7 +171,10 @@ void ConvexMPCLocomotion::run(ControlFSMData &data)
   }
   // 以上初始化完毕
   // 获取两只脚的接触状态，返回当前相位（2x1列向量） 没用上
-  contact_state = gait->getContactSubPhase();
+  contact_state = gait->getContactSubPhase();    //第一次运行的时候_phase好像都没有初始化 这里的数据第一次有用吗，这东西好像没用上，liu
+  //后面好像重新定义了新的
+
+
 
   // foot placement 脚位置
   //悬空的时间=MPC计算周期的时间步长*腿悬空是步数 dtMPC = dt * iterationsBetweenMPC=0.04  
@@ -195,7 +198,8 @@ void ConvexMPCLocomotion::run(ControlFSMData &data)
   // 两条腿
   for (int i = 0; i < 2; i++)
   {
-    // 判断是否第一次摆动
+    // 判断是否刚开始摆动（上一刻还是站立）
+    //在class  ConvexMPCLocomotion初始化的时候被置true，true
     if (firstSwing[i])
     {
       // 上电后第一次摆动时，剩余摆动时间 = 摆动时间
@@ -237,20 +241,30 @@ void ConvexMPCLocomotion::run(ControlFSMData &data)
       */
       //  落脚点Pf
       Vec3<double> Pf = seResult.position +                        // 机器人的当前位置 在世界坐标系下
-                        seResult.rBody.transpose() * pRobotFrame + // 将髋关节在身体坐标的偏移 转到“跟随世界坐标系”下的偏移
-                        seResult.vWorld * swingTimeRemaining[i];   // 机器人三轴运动速度*剩余摆动时间=位移 在世界坐标系下
+                        seResult.rBody.transpose() * pRobotFrame + // 加到这里表示当前hip关节的位置在世界坐标系下的表示
+                        seResult.vWorld * swingTimeRemaining[i];   // 再加上这里就是运动后机器人hip的位置，由于hip和足在
+                                                                  //运动完是在同一个投影的，所以后面可以将z置0可以得到落脚点的位置
 
       // 下面是做一些xy轴的偏移量，加到落脚点的位置上，提高落脚点的拟态或提高落脚点的变化
       // 水平方向上的最大偏移量 限制摆动的幅度
       double p_rel_max = 0.4; 
-      // // 以行走模式为例 _stance=durations[0]=5  dtMPC=0.4
+      // // 以行走模式为例 _stance=durations[0]=5  dtMPC=0.04
+
+
+
+      //这一段明显是对落脚点进行处理，但是原理是什么liu
+
       double pfx_rel = -0.015 + seResult.vWorld[0] * 0.5 * gait->_stance * dtMPC +
                        0.02 * (seResult.vWorld[0] - v_des_world[0]);                 // 0.02(当前机器人三轴速度-遥控器命令的三轴速度) 都是在世界坐标系下
                        
                        // 落脚点的偏移量=v*dt            暂时不明白gait->_stance在此处的意思。
 
       double pfy_rel = seResult.vWorld[1] * 0.5 * gait->_stance * dtMPC +
-                       0.02 * (seResult.vWorld[1] - v_des_world[1]);
+                       0.02 * (seResult.vWorld[1] - v_des_world[1]);//这里的dtMPC会被更新吗，是递减的吗
+                       
+
+
+
 
       // fmaxf 返回两个浮点数中的最大值 fminf 返回两个浮点数中的最小值 实现限幅
       pfx_rel = fminf(fmaxf(pfx_rel, -p_rel_max), p_rel_max);
@@ -266,7 +280,7 @@ void ConvexMPCLocomotion::run(ControlFSMData &data)
   }
 
 
-  // calc gait  calculation gait 计算步态 设置迭代次数 两次MPC之间的迭代次数iterationsBetweenMPC=40 迭代计数器iterationCounter=10
+  // calc gait  calculation gait 计算步态 设置迭代次数 两次MPC之间的迭代次数iterationsBetweenMPC=40 这个不变，iterationCounter程序运行一次加1
   gait->setIterations(iterationsBetweenMPC, iterationCounter); 
 
   // load LCM leg swing gains 加载关于腿部摆动（leg swing）的控制增益（gains）的信息 即pid控制
@@ -282,8 +296,14 @@ void ConvexMPCLocomotion::run(ControlFSMData &data)
   // gait
   Vec2<double> contactStates = gait->getContactSubPhase();   //2只脚当前支撑的状态 所处的相位
   Vec2<double> swingStates = gait->getSwingSubPhase();       //2只脚当前悬空的状态 所处的相位
+
+
+
   // 获取MPC步态表
-  int *mpcTable = gait->mpc_gait();      
+  int *mpcTable = gait->mpc_gait();      //什么意思
+
+
+
 
   //每10次程序迭代，运行一次mpc
   updateMPCIfNeeded(mpcTable, data, omniMode);
@@ -435,7 +455,8 @@ void ConvexMPCLocomotion::updateMPCIfNeeded(int *mpcTable, ControlFSMData &data,
     double r[6];
     for (int i = 0; i < 6; i++)
     {
-      // 抬脚点的三轴位置 减去 传感器获得的整体位置(可理解为质心位置)，并转为一维数组
+      // 抬脚点的三轴位置 减去 传感器获得的整体位置
+      //(可理解为在机器人质心出建立一个平行于世界坐标系的坐标系，在该坐标系下表示足的位置)，并转为一维数组
       r[i] = pFoot[i % 2][i / 2] - seResult.position[i / 2];
     }
     //MPC Weights MPC各个输入量的权重
@@ -456,8 +477,15 @@ void ConvexMPCLocomotion::updateMPCIfNeeded(int *mpcTable, ControlFSMData &data,
     // 位置误差最大允许值
     const double max_pos_error = .15;
 
-    double xStart = world_position_desired[0]; 
+    double xStart = world_position_desired[0]; //世界坐标系下下一步的目标位置
     double yStart = world_position_desired[1];
+
+
+  //这一段没有搞明白，world_position_desired好像是在世界速度*dt，加上了上一步的目标世界位置，
+  //但是下一步的位置和传感器读取上来的当前位置为什么要做误差？understand
+
+
+
     // 修正xy轴的位置偏差 *p = seResult.position.data();
     // 世界坐标位置，由于world_position_desired是由速度对时间积分得到，而p是直接由位置传感器获得，所以会有偏差
     // 以位置传感器为基准，允许有最大误差
@@ -470,6 +498,10 @@ void ConvexMPCLocomotion::updateMPCIfNeeded(int *mpcTable, ControlFSMData &data,
     world_position_desired[0] = xStart;
     world_position_desired[1] = yStart;
 
+
+
+
+
     // Vec3<double> ori_des_world; 
     // 期待的世界角度 orientation desirable world 由遥控器命令输入转为三轴的角度 位置 角速度 速度  然后预测在现在的状态下未来十个MPC循环的三轴的角度 位置 角速度 速度
     ori_des_world << stateCommand->data.stateDes[3], stateCommand->data.stateDes[4], stateCommand->data.stateDes[5];    
@@ -479,7 +511,7 @@ void ConvexMPCLocomotion::updateMPCIfNeeded(int *mpcTable, ControlFSMData &data,
                               seResult.rpy[2]*0,                                 // 2 强制为0的yaw轴角度
                               xStart*0,                                          // 3 强制为0的期待世界位置x轴
                               yStart*0,                                          // 4 强制为0的期待世界位置y轴
-                              0.5 ,                                              // 5 强制为0.5的期待世界位置z轴
+                              0.5 ,                                              // 5 强制为0.5的期待世界位置z轴0.55
                               0,                                                 // 6 强制为0的roll轴的角度变化率
                               0,                                                 // 7 强制为0的pitch轴的角度变化率
                               stateCommand->data.stateDes[11],                   // 8 遥控器命令输入的yaw轴的角度变化率

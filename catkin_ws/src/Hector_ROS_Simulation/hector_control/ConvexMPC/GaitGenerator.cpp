@@ -20,7 +20,7 @@ Gait::Gait(int nMPC_segments, Vec2<int> offsets, Vec2<int> durations, const std:
   _mpc_table = new int[nMPC_segments * 2];
   // cast函数 强制转换int->double 
   // 以行走模式为例 _offsetsPhase = (0,5) / 10 = (0,0.5)
-  _offsetsPhase = offsets.cast<double>() / (double)nMPC_segments;     
+  _offsetsPhase = offsets.cast<double>() / (double)nMPC_segments;    // .cast<double>()转换为double类型
   // 以行走模式为例 _durationsPhase = (5,5) / 10 = (0.5,0.5)
   _durationsPhase = durations.cast<double>() / (double)nMPC_segments; 
   // durations 中的第一个元素，表示支撑阶段的步态步数。 durations 持续时间
@@ -49,9 +49,14 @@ Vec2<double> Gait::getContactSubPhase()
   // Array 允许对每个元素进行操作，而不是执行矩阵或向量的矩阵运算。
   // progress 是相对于摆动阶段的当前位置 
   // Array2d: 2x1 的动态double类型数组
-  // 以行走模式为例 _offsetsPhase = (0,5) / 10 = (0,0.5)  _phase=[0,1]
-  Array2d progress = _phase - _offsetsPhase; 
+  // 以行走模式为例 _offsetsPhase = (0,5) / 10 = (0,0.5)  double   _phase=[0,1]，可以取值范围为1/400的倍数
+  Array2d progress = _phase - _offsetsPhase; //所以是(_phase-0,_phase-0.5)
 
+
+
+//这一段的作用是把phase分成两部分，
+//若程序迭代迭代不到200次返回（迭代次数*2/400,0），
+//若程序迭代超过200次不到400次返回（0,迭代次数*2/400）
   for (int i = 0; i < 2; i++)
   {
     if (progress[i] < 0)
@@ -79,16 +84,18 @@ Vec2<double> Gait::getSwingSubPhase()
   // 以行走模式为例 _offsetsPhase=(0,5)/10=(0,0.5)  _durationsPhase=(5,5)/10=(0.5,0.5)
   // 跳跃                       =(0,0)/10=(0,0)                   =(9,9)/10=(0.9,0.9)
   // 踱步                       =(0,9)/10=(0,0.9)                 =(5,5)/10=(0.5,0.5)
-  Array2d swing_offset = _offsetsPhase + _durationsPhase; 
+  Array2d swing_offset = _offsetsPhase + _durationsPhase; //(0.5,1)
   for (int i = 0; i < 2; i++)
     if (swing_offset[i] > 1)
       // 控制在[0.1]内，只有踱步模式会超，其他模式不会 
       swing_offset[i] -= 1.;
   // 以行走模式为例 _durationsPhase=(5,5)/10=(0.5,0.5) 减去支撑持续时间就是摆动持续时间
-  Array2d swing_duration = 1. - _durationsPhase; 
+  Array2d swing_duration = 1. - _durationsPhase; //(0.5,0)
 
-  Array2d progress = _phase - swing_offset;
+  Array2d progress = _phase - swing_offset;//_Phase∈（0，1）
 
+  //当迭代次数小于200次时，返回(0,迭代次数*2/400)
+  //当迭代次数大于200次小于400次时，返回(迭代次数*2/400，0)
   for (int i = 0; i < 2; i++)
   {
     if (progress[i] < 0)

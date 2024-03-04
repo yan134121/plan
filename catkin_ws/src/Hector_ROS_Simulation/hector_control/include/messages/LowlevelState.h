@@ -39,10 +39,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "../common/enumClass.h"
 
 struct UserValue{
-    float lx;
-    float ly;
-    float rx;
-    float ry;//左右腿当前的位置
+    //键盘按键
+    float lx;//D->+   A->-   在y轴方向移动
+    float ly;//W->+    S->-  在x轴方向移动，按一下速度增减0.025*1.5
+    float rx;//L->+   J->-从上往下看，逆时针旋转 按一下旋转速率增减0.025*2
+    float ry;//I->+   k->-从上往下看，顺时针旋转，有定义，但是实际上算法中没有使用
     float L2; // 没用上
     float vx; // vx in body frame 没用上
     float vy; // vy in body frame 没用上
