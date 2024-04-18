@@ -1,8 +1,9 @@
 <?xml version="1.0"?>
 
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
-
+<!-- 这部分是传动装置 ，用于连接控制器与关节-->
     <xacro:macro name="leg_transmission" params="name">
+<!-- <transmission>元素中包含了子元素，分别是<type>、<joint>和<actuator>，分别用于指定传输类型、关节名称和电机名称。这些元素的内容将在机器人实际建模和控制时被使用。 -->
 
         <transmission name="${name}_hip_tran">
             <type>transmission_interface/SimpleTransmission</type>

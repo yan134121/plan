@@ -54,7 +54,9 @@
          设置模型的初始高度为 0.545和x轴位置
          设置模型的关节初始位置
          生成的模型的名称为 "hector_gazebo"
-         参数来至 robot_description-->
+         参数来至 robot_description
+         -j表示各关节的初始角度-->
+         
     <node pkg="gazebo_ros" type="spawn_model" name="urdf_spawner" respawn="false" output="screen"
           args="-urdf 
           -z 0.545
@@ -70,10 +72,11 @@
     <!-- Load joint controller configurations from YAML file to parameter server
          将联合控制器配置从yaml文件加载到参数服务器 
          $hector_description/config/robot_control.yaml command 使用命令load-->
+         <!-- 使用宇树集成库，如果换电机会不会有问题？ -->
     <rosparam file="$(arg dollar)$(arg robot_path)/config/robot_control.yaml" command="load"/>
 
-    <!-- load the controllers 加载五个电机的控制器-->
-    <!-- 调用controller_manager产卵 名字叫controller_spawner 失败不重启 
+    <!-- load the controllers 加载十个电机的控制器，名称叫L_hip_controller等-->
+    <!-- 调用controller_manager 名字叫controller_spawner 失败不重启 
          ns="/hector_gazebo": 指定节点的命名空间，节点下的所有参数和话题都会加上 /hector_gazebo 的前缀-->
     <node pkg="controller_manager" type="spawner" name="controller_spawner" respawn="false"
           output="screen" ns="/hector_gazebo" args="joint_state_controller
